@@ -365,13 +365,19 @@ def fetch_recipe(recipe_filename, emb_model, tokenizer, device, embedding_name):
 
     parsed_recipe = fetch_parsed_recipe(recipe_filename) # Parsed Recipe File
     
-    if(embedding_name == 'bert'):
+    if(embedding_name[:4] == 'bert'):
+
+        embedding_vector, vector_lookup_list = generate_bert_embeddings(
+            emb_model, tokenizer, parsed_recipe, device
+        )  # Embeddings for Recipe
+
+    elif(embedding_name[:7] == 'roberta'):
 
         embedding_vector, vector_lookup_list = generate_bert_embeddings(
             emb_model, tokenizer, parsed_recipe, device
         )  # Embeddings for Recipe
     
-    elif (embedding_name == 'elmo'):
+    elif (embedding_name[:4] == 'elmo'):
         
         embedding_vector, vector_lookup_list = generate_elmo_embeddings(
             emb_model, tokenizer, parsed_recipe, device

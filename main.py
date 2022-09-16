@@ -30,7 +30,7 @@ Usage: python main.py model_name embedding_name
 """
 
 # importing libraries
-
+import time
 import torch
 import flair
 import argparse
@@ -41,7 +41,7 @@ from model import AlignmentModel
 from cosine_similarity_model import SimpleModel
 from sequence_model import SequenceModel
 from naive_model import NaiveModel
-from transformers import BertTokenizer, BertModel
+from transformers import BertTokenizer, BertModel, RobertaTokenizer, RobertaModel
 from flair.data import Sentence
 from flair.embeddings import ELMoEmbeddings
 from training_testing import Folds
@@ -70,17 +70,19 @@ def main():
         device = torch.device("cuda:"+args.cuda_device if torch.cuda.is_available() else "cpu")
         flair.device = device 
 
+    start = time.time()
+    print("Start time:", start)
     print("-------Loading Model-------")
 
     # Loading Model definition
     
-    if embedding_name == 'bert' :
+    if embedding_name[:4] == 'bert' :
 
         tokenizer = BertTokenizer.from_pretrained(
-            "bert-base-uncased"
+            embedding_name
         )  # Bert Tokenizer
     
-        emb_model = BertModel.from_pretrained("bert-base-uncased", output_hidden_states=True).to(
+        emb_model = BertModel.from_pretrained(embedding_name, output_hidden_states=True).to(
             device
         )  # Bert Model for Embeddings
         
@@ -88,13 +90,26 @@ def main():
             "hidden_size"
         ]  # BERT embedding dimension
     
-        # print(bert)
+
+    elif embedding_name[:7] == 'roberta' : # roberta-base / roberta-large
+
+        tokenizer = RobertaTokenizer.from_pretrained(
+            embedding_name
+        )  # RoBerta Tokenizer
     
-    elif embedding_name == 'elmo' :
+        emb_model = RobertaModel.from_pretrained(embedding_name, output_hidden_states=True).to(
+            device
+        )  # RoBerta Model for Embeddings
+        
+        embedding_dim = emb_model.config.to_dict()[
+            "hidden_size"
+        ]  # RoBerta embedding dimension
+    
+    elif embedding_name[:4] == 'elmo' :
         
         tokenizer = Sentence #Flair sentence for ELMo embeddings
-        
-        emb_model = ELMoEmbeddings('small')
+        print(embedding_name[5:])
+        emb_model = ELMoEmbeddings(embedding_name[5:])
         
         embedding_dim = emb_model.embedding_length
 
@@ -111,7 +126,7 @@ def main():
             if param.requires_grad:
                     print(name)"""
 
-        optimizer = optim.Adam(model.parameters(), lr=LR)  # optimizer for training
+        optimizer = optim.Adam(model.parameters(), lr=LR, capturable=True)  # optimizer for training
         criterion = nn.CrossEntropyLoss()  # Loss function
 
         ################ Cross Validation Folds #################
@@ -131,7 +146,7 @@ def main():
 
         print(model)
 
-        optimizer = optim.Adam(model.parameters(), lr=LR)  # optimizer for training
+        optimizer = optim.Adam(model.parameters(), lr=LR, capturable=True)  # optimizer for training
         criterion = nn.CrossEntropyLoss()  # Loss function
 
         TT.run_folds(
@@ -185,6 +200,9 @@ def main():
             "Incorrect Argument: Model_name should be ['Cosine_similarity', 'Naive', 'Alignment-no-feature', 'Alignment-with-feature']"
         )
 
+    end = time.time()
+    print("End time:", end)
+    print("Time elapsed:", end - start)
 
 if __name__ == "__main__":
     main()
